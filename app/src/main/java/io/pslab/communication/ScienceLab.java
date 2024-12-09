@@ -462,8 +462,9 @@ public class ScienceLab {
                 mPacketHandler.sendInt(this.dataSplitting);
                 byte[] data = new byte[this.dataSplitting * 2 + 1];
                 mPacketHandler.read(data, this.dataSplitting * 2 + 1);
-                for (int j = 0; j < data.length - 1; j++)
+                for (int j = 0; j < data.length - 1; j++) {
                     listData.add((int) data[j] & 0xff);
+                }
             }
 
             if ((samples % this.dataSplitting) != 0) {
@@ -473,8 +474,9 @@ public class ScienceLab {
                 mPacketHandler.sendInt(samples % this.dataSplitting);
                 byte[] data = new byte[2 * (samples % this.dataSplitting) + 1];
                 mPacketHandler.read(data, 2 * (samples % this.dataSplitting) + 1);
-                for (int j = 0; j < data.length - 1; j++)
+                for (int j = 0; j < data.length - 1; j++) {
                     listData.add((int) data[j] & 0xff);
+                }
             }
 
         } catch (IOException e) {
@@ -483,8 +485,12 @@ public class ScienceLab {
         }
 
         for (int i = 0; i < listData.size() / 2; i++) {
-            this.buffer[i] = (listData.get(i * 2)) | (listData.get(i * 2 + 1) << 8);
-            while (this.buffer[i] > 1023) this.buffer[i] -= 1023;
+            if (i * 2 + 1 < listData.size()) {
+                this.buffer[i] = (listData.get(i * 2)) | (listData.get(i * 2 + 1) << 8);
+                while (this.buffer[i] > 1023) this.buffer[i] -= 1023;
+            } else {
+                Log.e(TAG, "Index out of bounds: " + (i * 2 + 1));
+            }
         }
 
         Log.v("RAW DATA:", Arrays.toString(Arrays.copyOfRange(buffer, 0, samples)));
