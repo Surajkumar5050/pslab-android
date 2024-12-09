@@ -446,52 +446,58 @@ public class ScienceLab {
     }
 
     private boolean fetchData(int channelNumber) {
-        int samples = this.aChannels.get(channelNumber - 1).length;
-        if (channelNumber > this.channelsInBuffer) {
-            Log.v(TAG, "Channel Unavailable");
-            return false;
-        }
-        Log.v("Samples", "" + samples);
-        Log.v("Data Splitting", "" + this.dataSplitting);
-        ArrayList<Integer> listData = new ArrayList<>();
-        try {
-            for (int i = 0; i < samples / this.dataSplitting; i++) {
-                mPacketHandler.sendByte(mCommandsProto.COMMON);
-                mPacketHandler.sendByte(mCommandsProto.RETRIEVE_BUFFER);
-                mPacketHandler.sendInt(this.aChannels.get(channelNumber - 1).bufferIndex + (i * this.dataSplitting));
-                mPacketHandler.sendInt(this.dataSplitting);
-                byte[] data = new byte[this.dataSplitting * 2 + 1];
-                mPacketHandler.read(data, this.dataSplitting * 2 + 1);
-                for (int j = 0; j < data.length - 1; j++)
-                    listData.add((int) data[j] & 0xff);
+    	int samples = this.aChannels.get(channelNumber - 1).length;
+    	if (channelNumber > this.channelsInBuffer) {
+        Log.v(TAG, "Channel Unavailable");
+        return false;
+    	}
+    	Log.v("Samples", "" + samples);
+    Log.v("Data Splitting", "" + this.dataSplitting);
+    ArrayList<Integer> listData = new ArrayList<>();
+    try {
+        for (int i = 0; i < samples / this.dataSplitting; i++) {
+            mPacketHandler.sendByte(mCommandsProto.COMMON);
+            mPacketHandler.sendByte(mCommandsProto.RETRIEVE_BUFFER);
+            mPacketHandler.sendInt(this.aChannels.get(channelNumber - 1).bufferIndex + (i * this.dataSplitting));
+            mPacketHandler.sendInt(this.dataSplitting);
+            byte[] data = new byte[this.dataSplitting * 2 + 1];
+            mPacketHandler.read(data, this.dataSplitting * 2 + 1);
+            for (int j = 0; j < data.length - 1; j++) {
+                listData.add((int) data[j] & 0xff);
             }
-
-            if ((samples % this.dataSplitting) != 0) {
-                mPacketHandler.sendByte(mCommandsProto.COMMON);
-                mPacketHandler.sendByte(mCommandsProto.RETRIEVE_BUFFER);
-                mPacketHandler.sendInt(this.aChannels.get(channelNumber - 1).bufferIndex + samples - samples % this.dataSplitting);
-                mPacketHandler.sendInt(samples % this.dataSplitting);
-                byte[] data = new byte[2 * (samples % this.dataSplitting) + 1];
-                mPacketHandler.read(data, 2 * (samples % this.dataSplitting) + 1);
-                for (int j = 0; j < data.length - 1; j++)
-                    listData.add((int) data[j] & 0xff);
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-            return false;
         }
 
-        for (int i = 0; i < listData.size() / 2; i++) {
+        if ((samples % this.dataSplitting) != 0) {
+            mPacketHandler.sendByte(mCommandsProto.COMMON);
+            mPacketHandler.sendByte(mCommandsProto.RETRIEVE_BUFFER);
+            mPacketHandler.sendInt(this.aChannels.get(channelNumber - 1).bufferIndex + samples - samples % this.dataSplitting);
+            mPacketHandler.sendInt(samples % this.dataSplitting);
+            byte[] data = new byte[2 * (samples % this.dataSplitting) + 1];
+            mPacketHandler.read(data, 2 * (samples % this.dataSplitting) + 1);
+            for (int j = 0; j < data.length - 1; j++) {
+                listData.add((int) data[j] & 0xff);
+            }
+        }
+
+    } catch (IOException e) {
+        e.printStackTrace();
+        return false;
+    }
+
+    for (int i = 0; i < listData.size() / 2; i++) {
+        if (i * 2 + 1 < listData.size()) {
             this.buffer[i] = (listData.get(i * 2)) | (listData.get(i * 2 + 1) << 8);
             while (this.buffer[i] > 1023) this.buffer[i] -= 1023;
+        } else {
+            Log.e(TAG, "Index out of bounds: " + (i * 2 + 1));
         }
-
-        Log.v("RAW DATA:", Arrays.toString(Arrays.copyOfRange(buffer, 0, samples)));
-
-        this.aChannels.get(channelNumber - 1).yAxis = this.aChannels.get(channelNumber - 1).fixValue(Arrays.copyOfRange(this.buffer, 0, samples));
-        return true;
     }
+
+    Log.v("RAW DATA:", Arrays.toString(Arrays.copyOfRange(buffer, 0, samples)));
+
+    this.aChannels.get(channelNumber - 1).yAxis = this.aChannels.get(channelNumber - 1).fixValue(Arrays.copyOfRange(this.buffer, 0, samples));
+    return true;
+}
 
     /**
      * Configure trigger parameters for 10-bit capture commands
